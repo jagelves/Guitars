@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Single-Cut Showdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  /* Riviera Blue */
+  :root {
+    --bg: #f6f8fb; --surface: #ffffff; --surface-2: #eef2f7; --text: #142033; --muted: #556173;
+    --border: #dce3ec; --accent: #1f4fa0; --gold: #8c6a2a; --chrome: #8d99a8; --diff: #edf3fc; --ok: #23704a; --bad: #a3312a;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(20,32,51,.06), 0 8px 24px rgba(20,32,51,.06);
+    --serif: "Playfair Display", Georgia, serif;
+    --sans: Manrope, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.5; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 56px 20px 64px; }
+  header h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(32px, 5vw, 52px); line-height: 1.05; margin: 0 0 10px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 16px; max-width: 640px; }
+  .tabs { display: flex; gap: 4px; margin: 32px 0 28px; background: var(--surface); border: 1px solid var(--border); padding: 4px; border-radius: 999px; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+  .tabs button { border: 0; background: transparent; color: var(--muted); font: 600 14px var(--sans); padding: 11px 20px; min-height: 44px; border-radius: 999px; cursor: pointer; }
+  .tabs button.on { background: var(--accent); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; gap: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .hero { background: var(--surface-2); aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border-bottom: 1px solid var(--border); }
+  .hero img { width: 92%; height: 92%; object-fit: contain; mix-blend-mode: multiply; }
+  .badge { position: absolute; top: 14px; left: 14px; z-index: 1; font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+  .badge.in { color: var(--ok); } .badge.out { color: var(--bad); } .badge.warn { color: var(--gold); }
+  .body { padding: 22px 22px 24px; }
+  .finish { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .title-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+  .title-row h2 { font-family: var(--serif); font-weight: 700; font-size: 24px; line-height: 1.15; margin: 0; }
+  .price { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .price.na { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .sub { color: var(--muted); font-size: 13px; margin: 6px 0 16px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip { font-size: 12px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); color: var(--text); }
+  .chip .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  details { border-top: 1px solid var(--border); }
+  summary { cursor: pointer; padding: 13px 0; font-weight: 600; font-size: 14px; list-style: none; display: flex; justify-content: space-between; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--muted); }
+  details[open] summary::after { content: "–"; }
+  .rows { display: grid; grid-template-columns: minmax(110px, 42%) 1fr; gap: 8px 14px; margin: 0; padding-bottom: 14px; font-size: 14px; }
+  .rows dt { color: var(--muted); } .rows dd { margin: 0; }
+  .note { font-size: 12px; color: var(--muted); font-style: italic; margin: 16px 0 0; }
+  .card .note { border-top: 1px solid var(--border); padding-top: 14px; }
+  .link { display: inline-block; margin-top: 12px; color: var(--accent); font-weight: 600; font-size: 14px; text-decoration: none; }
+  .link:hover { color: var(--text); }
+  .cmp-head { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .pick-label { font-size: 14px; font-weight: 600; margin-bottom: 10px; } .pick-label span { color: var(--muted); font-weight: 500; }
+  .cmp-head .card { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; }
+  .cmp-head .pick { position: relative; font: inherit; color: inherit; text-align: left; cursor: pointer; box-shadow: none; opacity: .6; transition: opacity .15s, border-color .15s, box-shadow .15s; }
+  .cmp-head .pick:hover { opacity: .85; }
+  .cmp-head .pick.on { opacity: 1; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+  .cmp-head .pick:disabled { cursor: default; }
+  .cmp-head .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cmp-head .check { position: absolute; top: 8px; right: 8px; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--surface); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .cmp-head .pick.on .check { background: var(--accent); border-color: var(--accent); }
+  .cmp-head .thumb { width: 64px; height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--surface-2); border-radius: 10px; overflow: hidden; }
+  .cmp-head img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+  .cmp-head strong { display: block; font-size: 14px; } .cmp-head span { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 14px; color: var(--muted); min-height: 44px; }
+  .toolbar input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+  table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  thead th { background: var(--surface-2); font-size: 13px; }
+  tr.section td { background: var(--surface-2); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  tr.diff td:not(:first-child) { background: var(--diff); }
+  td:first-child { color: var(--muted); width: 22%; }
+  tbody tr:last-child td { border-bottom: 0; }
+  footer { margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  footer a { color: inherit; }
+  @media (max-width: 560px) { .cmp-head { grid-template-columns: 1fr; } td:first-child { width: auto; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+const CDN = "https://cdn.shopify.com/s/files/1/0659/3966/9171/files/";
+const sized = (f, w = 900) => f.startsWith("http") ? f : `${CDN}${f}${f.includes("?") ? "&" : "?"}width=${w}`;
+
+// Each guitar has one full-body photo. `rotate` and `scale` straighten and size photos that
+// aren't shot upright (the Trad Pro photo is landscape, headstock pointing right).
+const GUITARS = [
+  {
+    id: "supreme",
+    name: "Les Paul Supreme",
+    finish: "Fireburst",
+    model: "LPSU00FIGH1",
+    price: 3999,
+    status: "In stock", statusClass: "in",
+    pickupChip: "Burstbucker Pro / Pro+",
+    hardware: "Gold",
+    hwColor: "var(--gold)",
+    url: "https://www.gibson.com/products/gibson-les-paul-supreme-fireburst",
+    linkLabel: "View on gibson.com →",
+    image: "LPSU00FIGH1_front_ed6b27d7-8dcf-4e23-a7eb-de0e92a625db.webp?v=1744914881",
+    note: "Spec list says AAA figured maple top; the short product blurb says plain maple.",
+    specs: {
+      Body: {
+        "Shape / Style": "Les Paul",
+        "Body Material": "Mahogany",
+        "Top": "AAA Figured Maple",
+        "Weight Relief": "Ultra-Modern",
+        "Binding": "Multi-ply top & headstock, single-ply fretboard",
+        "Finish Type": "Gloss Nitrocellulose Lacquer",
+      },
+      Neck: {
+        "Neck Material": "Mahogany",
+        "Profile": "SlimTaper",
+        "Joint": "Glued in, Modern Contoured Heel",
+        "Scale Length": '24.75" (628.65 mm)',
+        "Nut Width": '1.7" (43.05 mm)',
+        "Nut Material": "Graph Tech",
+        "End of Board Width": '2.26" (57.4 mm)',
+        "Truss Rod": "Adjustable",
+      },
+      Fretboard: {
+        "Material": "Ebony",
+        "Radius": 'Compound, 10" to 16"',
+        "Fret Count": "22",
+        "Fret Size": "Medium Jumbo",
+        "Inlays": "Mother of Pearl Super Split Block",
+        "Headstock Inlay": "Gibson logo + 1940s-inspired inlay (MOP)",
+      },
+      Electronics: {
+        "Neck Pickup": "Burstbucker Pro",
+        "Bridge Pickup": "Burstbucker Pro Plus",
+        "Pickup Type": "Passive humbuckers",
+        "Controls": "2 push/pull volume (coil tap), 2 push/pull tone (Pure Bypass / phase)",
+        "Pickup Selector": "3-way toggle",
+        "Output Jack": '1/4"',
+      },
+      Hardware: {
+        "Bridge": "Aluminum Nashville Tune-O-Matic",
+        "Tailpiece": "Aluminum Stop Bar",
+        "Tuners": "Locking Grover Keystone",
+        "Hardware Finish": "Gold",
+        "Pickup Covers": "Gold",
+        "Jack Plate": "Gold",
+        "Control Knobs": "Black Top Hat w/ gold insert",
+        "Control Covers": "—",
+        "Mounting Rings": "—",
+        "Switch Tip": "Black",
+        "Switchwasher": "None",
+        "Pickguard": "Black 5-ply (not mounted)",
+        "Strap Buttons": "—",
+      },
+      Misc: {
+        "Strings": ".010 – .046",
+        "Case": "Hardshell",
+        "Accessories": "Gibson Accessory Kit",
+        "Shipping Weight": "23 lb (368 oz)",
+        "Made In": "USA (Nashville)",
+      },
+    },
+  },
+  {
+    id: "tradpro",
+    name: "Les Paul Traditional Pro II 60s",
+    finish: "Merlot",
+    model: "LPTP26MLCH3",
+    price: null,
+    status: "Discontinued", statusClass: "warn",
+    pickupChip: "Super 57 / '57 Classic, coil split",
+    hardware: "Chrome",
+    hwColor: "var(--chrome)",
+    url: "https://www.gibsontraditional.com/models/gibson-les-paul-traditional-pro-ii-60s/",
+    linkLabel: "View on gibsontraditional.com →",
+    image: "https://i0.wp.com/www.gibsontraditional.com/wp-content/uploads/2016/03/Les-Paul-Traditional-Pro-II-60s-LPTP26MLCH3.jpg?fit=978%2C361&ssl=1",
+    rotate: -90,
+    scale: 1,
+    note: "Made 2012–2014, so there's no current price; check used listings. Specs come from gibsontraditional.com, which doesn't list fret, radius or inlay details.",
+    specs: {
+      Body: {
+        "Shape / Style": "Les Paul",
+        "Body Material": "Mahogany",
+        "Top": "Maple",
+        "Weight Relief": "Traditional",
+        "Binding": "—",
+        "Finish Type": "Gloss top, satin back & sides",
+      },
+      Neck: {
+        "Neck Material": "Mahogany",
+        "Profile": "'60s Slim",
+        "Joint": "Glued in",
+        "Scale Length": '24.75"',
+        "Nut Width": '1.695" (43 mm)',
+        "Nut Material": "—",
+        "End of Board Width": "—",
+        "Truss Rod": "—",
+      },
+      Fretboard: {
+        "Material": "Rosewood",
+        "Radius": "—",
+        "Fret Count": "—",
+        "Fret Size": "—",
+        "Inlays": "—",
+        "Headstock Inlay": "—",
+      },
+      Electronics: {
+        "Neck Pickup": "'57 Classic",
+        "Bridge Pickup": "Super 57",
+        "Pickup Type": "Passive humbuckers",
+        "Controls": "2 volume, 2 tone, coil split",
+        "Pickup Selector": "3-way toggle",
+        "Output Jack": "—",
+      },
+      Hardware: {
+        "Bridge": "Nashville Tune-O-Matic",
+        "Tailpiece": "Stop Bar",
+        "Tuners": "Grover Locking, Tulip buttons (18:1)",
+        "Hardware Finish": "Chrome",
+        "Pickup Covers": "—",
+        "Jack Plate": "—",
+        "Control Knobs": "—",
+        "Control Covers": "—",
+        "Mounting Rings": "—",
+        "Switch Tip": "—",
+        "Switchwasher": "—",
+        "Pickguard": "—",
+        "Strap Buttons": "—",
+      },
+      Misc: {
+        "Strings": "—",
+        "Case": "—",
+        "Accessories": "—",
+        "Shipping Weight": "—",
+        "Made In": "USA",
+      },
+    },
+  },
+  {
+    id: "koa",
+    name: "Les Paul Modern Koa",
+    finish: "Natural · Exclusive",
+    model: "LPMK24WNCH1",
+    price: 3799,
+    status: "In stock", statusClass: "in",
+    pickupChip: "Burstbucker Pro / Pro+",
+    hardware: "Chrome",
+    hwColor: "var(--chrome)",
+    url: "https://www.gibson.com/products/gibson-les-paul-modern-koa-exclusive-natural",
+    linkLabel: "View on gibson.com →",
+    image: "LPMK24WNCH1_front.png?v=1744314397",
+    note: 'Gibson lists the radius as "1.0mm / 0.04in" (a typo); the description confirms it is a compound radius.',
+    specs: {
+      Body: {
+        "Shape / Style": "Les Paul",
+        "Body Material": "Mahogany",
+        "Top": "Figured Koa",
+        "Weight Relief": "Ultra-Modern",
+        "Binding": "Single-ply, top & fretboard",
+        "Finish Type": "Gloss Nitrocellulose Lacquer",
+      },
+      Neck: {
+        "Neck Material": "Mahogany",
+        "Profile": "Asymmetrical SlimTaper",
+        "Joint": "Glued in, Modern Contoured Heel",
+        "Scale Length": '24.75" (628.65 mm)',
+        "Nut Width": '1.7" (43.05 mm)',
+        "Nut Material": "Graph Tech",
+        "End of Board Width": '2.26" (57.4 mm)',
+        "Truss Rod": "Adjustable",
+      },
+      Fretboard: {
+        "Material": "Ebony",
+        "Radius": "Compound (exact values not listed)",
+        "Fret Count": "22",
+        "Fret Size": "Medium Jumbo",
+        "Inlays": "Mother of Pearl Trapezoid",
+        "Headstock Inlay": "—",
+      },
+      Electronics: {
+        "Neck Pickup": "Burstbucker Pro",
+        "Bridge Pickup": "Burstbucker Pro Plus",
+        "Pickup Type": "Passive humbuckers",
+        "Controls": "2 push/pull volume (coil tap), 2 push/pull tone (Pure Bypass / phase)",
+        "Pickup Selector": "3-way toggle",
+        "Output Jack": '1/4"',
+      },
+      Hardware: {
+        "Bridge": "Aluminum Nashville Tune-O-Matic",
+        "Tailpiece": "Aluminum Stop Bar",
+        "Tuners": "Grover Locking Rotomatic, Keystone buttons",
+        "Hardware Finish": "Chrome",
+        "Pickup Covers": "Chrome",
+        "Jack Plate": "Chrome",
+        "Control Knobs": "Clear Top Hat",
+        "Control Covers": "Black",
+        "Mounting Rings": "Black",
+        "Switch Tip": "Black",
+        "Switchwasher": "Black (not mounted)",
+        "Pickguard": "Black 5-ply (not mounted)",
+        "Strap Buttons": "2",
+      },
+      Misc: {
+        "Strings": ".010 – .046",
+        "Case": "Hardshell",
+        "Accessories": "Gibson Accessory Kit",
+        "Shipping Weight": "23 lb (368 oz)",
+        "Made In": "USA (Nashville)",
+      },
+    },
+  },
+];
+
+const money = (n) => n == null ? "No longer made" : "$" + n.toLocaleString("en-US");
+
+function Img({ g, w, alt }) {
+  const [err, setErr] = useState(false);
+  if (err) return <div style={{ color: "var(--muted)", fontSize: 13, padding: 20 }}>Image unavailable</div>;
+  const style = g.rotate || g.scale ? { transform: `rotate(${g.rotate || 0}deg) scale(${g.scale || 1})` } : undefined;
+  return <img src={sized(g.image, w)} alt={alt} loading="lazy" style={style} onError={() => setErr(true)} />;
+}
+
+function GuitarCard({ g }) {
+  const inlays = g.specs.Fretboard.Inlays;
+  return (
+    <article className="card">
+      <div className="hero">
+        <span className={"badge " + g.statusClass}>{g.status}</span>
+        <Img g={g} w={1000} alt={`${g.name}, ${g.finish}`} />
+      </div>
+      <div className="body">
+        <div className="finish">{g.finish}</div>
+        <div className="title-row">
+          <h2>{g.name}</h2>
+          <span className={"price" + (g.price == null ? " na" : "")}>{money(g.price)}</span>
+        </div>
+        <div className="sub">Model {g.model}</div>
+        <div className="chips">
+          <span className="chip">{g.specs.Body.Top} top</span>
+          <span className="chip"><span className="dot" style={{ background: g.hwColor }} />{g.hardware} hardware</span>
+          {inlays !== "—" && <span className="chip">{inlays.replace("Mother of Pearl ", "")} inlays</span>}
+          <span className="chip">{g.pickupChip}</span>
+        </div>
+        {Object.entries(g.specs).map(([section, rows], i) => (
+          <details key={section} open={i === 0}>
+            <summary>{section}</summary>
+            <dl className="rows">
+              {Object.entries(rows).filter(([, v]) => v !== "—").map(([k, v]) => (
+                <React.Fragment key={k}><dt>{k}</dt><dd>{v}</dd></React.Fragment>
+              ))}
+            </dl>
+          </details>
+        ))}
+        <p className="note">Note: {g.note}</p>
+        <a className="link" href={g.url} target="_blank" rel="noopener">{g.linkLabel}</a>
+      </div>
+    </article>
+  );
+}
+
+function Compare() {
+  const [onlyDiff, setOnlyDiff] = useState(false);
+  const [picked, setPicked] = useState(GUITARS.map(g => g.id));
+  const list = GUITARS.filter(g => picked.includes(g.id));
+  const toggle = (id) => setPicked(p => p.includes(id)
+    ? (p.length > 2 ? p.filter(x => x !== id) : p)          // keep at least two to compare
+    : GUITARS.map(g => g.id).filter(x => x === id || p.includes(x)));
+  const sections = Object.keys(GUITARS[0].specs);
+  const keysFor = (sec) => [...new Set(list.flatMap(g => Object.keys(g.specs[sec] || {})))];
+  const val = (g, sec, k) => (g.specs[sec] && g.specs[sec][k]) || "—";
+  const differs = (sec, k) => new Set(list.map(g => val(g, sec, k))).size > 1;
+  const priceDiff = new Set(list.map(g => money(g.price))).size > 1;
+  const statusDiff = new Set(list.map(g => g.status)).size > 1;
+  const diffCount = sections.reduce((n, s) => n + keysFor(s).filter(k => differs(s, k)).length, 0) + priceDiff + statusDiff;
+  return (
+    <div>
+      <div className="pick-label">Choose guitars to compare <span>(at least two)</span></div>
+      <div className="cmp-head">
+        {GUITARS.map(g => {
+          const on = picked.includes(g.id);
+          return (
+            <button type="button" className={"card pick" + (on ? " on" : "")} key={g.id} aria-pressed={on}
+              disabled={on && picked.length <= 2} onClick={() => toggle(g.id)}>
+              <span className="check" aria-hidden="true">{on ? "✓" : ""}</span>
+              <div className="thumb"><Img g={g} w={200} alt="" /></div>
+              <div><strong>{g.name}</strong><span>{money(g.price)}</span> <small style={{ color: "var(--muted)" }}>· {g.finish}</small></div>
+            </button>
+          );
+        })}
+      </div>
+      <label className="toolbar">
+        <input type="checkbox" checked={onlyDiff} onChange={e => setOnlyDiff(e.target.checked)} />
+        Show differences only ({diffCount} specs differ, highlighted)
+      </label>
+      <div className="table-wrap">
+        <table>
+          <thead><tr><th>Spec</th>{list.map(g => <th key={g.id}>{g.name}</th>)}</tr></thead>
+          <tbody>
+            {(!onlyDiff || priceDiff) && <tr className={priceDiff ? "diff" : ""}><td>Price</td>{list.map(g => <td key={g.id}>{money(g.price)}</td>)}</tr>}
+            {(!onlyDiff || statusDiff) && <tr className={statusDiff ? "diff" : ""}><td>Availability</td>{list.map(g => <td key={g.id}>{g.status}</td>)}</tr>}
+            {sections.map(s => {
+              const keys = keysFor(s).filter(k => !onlyDiff || differs(s, k));
+              if (!keys.length) return null;
+              return (
+                <React.Fragment key={s}>
+                  <tr className="section"><td colSpan={list.length + 1}>{s}</td></tr>
+                  {keys.map(k => (
+                    <tr key={k} className={differs(s, k) ? "diff" : ""}>
+                      <td>{k}</td>{list.map(g => <td key={g.id}>{val(g, s, k)}</td>)}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="note" style={{ marginTop: 10 }}>"—" means the spec isn't listed by the maker or source.</p>
+    </div>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState("cards");
+  return (
+    <div className="wrap">
+      <header>
+        <h1>Single-Cut Showdown</h1>
+        <p>Gibson Les Paul Supreme vs. Les Paul Traditional Pro II 60s vs. Les Paul Modern Koa — photos and full specs</p>
+      </header>
+      <nav className="tabs" aria-label="Views">
+        <button className={tab === "cards" ? "on" : ""} onClick={() => setTab("cards")}>Guitars</button>
+        <button className={tab === "compare" ? "on" : ""} onClick={() => setTab("compare")}>Side-by-side</button>
+      </nav>
+      {tab === "cards"
+        ? <div className="grid">{GUITARS.map(g => <GuitarCard key={g.id} g={g} />)}</div>
+        : <Compare />}
+      <footer>
+        Specs, prices and photos from gibson.com (<a href="https://www.gibson.com/products/gibson-les-paul-supreme-fireburst" target="_blank" rel="noopener">Supreme</a>,{" "}
+        <a href="https://www.gibson.com/products/gibson-les-paul-modern-koa-exclusive-natural" target="_blank" rel="noopener">Modern Koa</a>); Traditional Pro II 60s specs and photo from{" "}
+        <a href="https://www.gibsontraditional.com/models/gibson-les-paul-traditional-pro-ii-60s/" target="_blank" rel="noopener">gibsontraditional.com</a>. Prices and stock checked Nov 24, 2026. Photos load from those sites, so you need an internet connection to see them.
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
